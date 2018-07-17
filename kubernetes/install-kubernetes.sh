@@ -3,13 +3,14 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+CONTAINER_RUNTIME=${CONTAINER_RUNTIME:-"docker"}
 CLUSTER_CIDR=${CLUSTER_CIDR:-"10.244.0.0/16"}
 CONTAINER_CIDR=${CONTAINER_CIDR:-"10.244.1.0/24"}
-NETWORK_PLUGIN=${NETWORK_PLUGIN:-"calico"}
+NETWORK_PLUGIN=${NETWORK_PLUGIN:-"flannel"}
+USE_MIRROR=${USE_MIRROR:-""}
 
 KUBERNTES_ROOT=$(dirname "${BASH_SOURCE}")
 source ${KUBERNTES_ROOT}/lib/util.sh
-source ${KUBERNTES_ROOT}/lib/docker.sh
 source ${KUBERNTES_ROOT}/lib/kubernetes.sh
 source ${KUBERNTES_ROOT}/lib/cni.sh
 
@@ -46,15 +47,23 @@ lsb_dist=$(lsb-dist)
 case "$lsb_dist" in
 
     ubuntu)
-        install-docker-ubuntu
-        install-kubelet-ubuntu
+        setup-container-runtime
+        if [ "$USE_MIRROR" = "" ]; then
+            install-kubelet-ubuntu
+        else
+            install-kubelet-ubuntu-mirror
+        fi
         setup-master
         install-network-plugin
     ;;
 
     fedora|centos|redhat)
-        install-docker-centos
-        install-kubelet-centos
+        setup-container-runtime
+        if [ "$USE_MIRROR" = "" ]; then
+            install-kubelet-centos
+        else
+            install-kubelet-centos-mirror
+        fi
         setup-master
         install-network-plugin
     ;;
@@ -64,4 +73,3 @@ case "$lsb_dist" in
     ;;
 
 esac
-
